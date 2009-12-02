@@ -17,17 +17,32 @@ require 'memcached'
 Cacheable.repository = Memcached.new 'localhost:11211', :support_cas => true
 
 class Vampire
-  extend Cacheable
+  cattr_accessor :enemy_count
+  @@enemy_count = 0
 
-  # needed by the cacheable interface
-  def self.cache_key
-    'Vampire'
+  class << self
+    # Cacheable interface on classes
+    def cache_key
+      'Vampire'
+    end
+    extend Cacheable
+    # end Cacheable interface
+
+    def enemy
+      self.enemy_count += 1
+      'Children of the Moon'
+    end
+    cacheify :enemy
   end
+
+  # Cacheable interface for instances
   def cache_key
-    "#{self.class.cache_key}/#{id}"
+    "Vampire/#{@id}"
   end
+  extend Cacheable
+  # end Cacheable interface
 
-  attr_accessor :name_count, :id_count, :frazzled_query_count, :pump_bang_count
+  attr_accessor :name_count, :frazzled_query_count, :pump_bang_count
 
   def initialize(shorthand)
     case shorthand
@@ -43,14 +58,8 @@ class Vampire
       @pumped = true
     end
     @name_count = 0
-    @id_count = 0
     @frazzled_query_count = 0
     @pump_bang_count = 0
-  end
-
-  def id
-    self.id_count += 1
-    @id
   end
 
   def name
@@ -70,16 +79,4 @@ class Vampire
     @pumped = true
   end
   cacheify :pump!
-
-  cattr_accessor :enemy_count
-  @@enemy_count = 0
-
-  class << self
-    extend Cacheable
-    def enemy
-      self.enemy_count += 1
-      'Children of the Moon'
-    end
-    cacheify :enemy
-  end
 end

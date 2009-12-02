@@ -1,4 +1,6 @@
 require 'active_support'
+require 'set'
+require 'zlib'
 
 module Cacheable
   def self.repository
@@ -38,11 +40,62 @@ module Cacheable
     end
     repository.get key
   end
+  
+  def self.delete(obj, symbol)
+    repository.delete key_for(obj, symbol)
+  end
+
+  def self.registry
+    Thread.current[:cacheable_registry] ||= Hash.new
+  end
+  
+  def self.register(obj, symbol)
+    self.registry[obj] ||= Set.new
+    self.registry[obj] << symbol
+  end
+  
+  def uncacheify(symbol)
+    ::Cacheable.delete self, symbol
+  rescue Memcached::NotFound
+    # ignore
+  end
+  
+  def uncacheify_all
+    ::Cacheable.registry[metaclass].each do |symbol|
+      uncacheify symbol
+    end
+  end
+  
+  module InstanceMethods
+    def uncacheify(symbol)
+      ::Cacheable.delete self, symbol
+    rescue Memcached::NotFound
+      # ignore
+    end
+
+    def uncacheify_all
+      ::Cacheable.registry[self.class].each do |symbol|
+        uncacheify symbol
+      end
+    end
+    
+    # This method intentionally commented out (see tests)
+    # def foobar
+    #   # hi
+    # end
+  end
 
   def cacheify(symbol)
     original_method = :"_uncacheified_#{symbol}"
+    
+    ::Cacheable.register self, symbol
 
     class_eval <<-EOS, __FILE__, __LINE__
+      # Don't include InstanceMethods when this is called from the anonymous singleton (aka metaclass)
+      if self.name.present?
+        include InstanceMethods
+      end
+      
       if method_defined?(:#{original_method})
         raise "Already cacheified #{symbol}"
       end
