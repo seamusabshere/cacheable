@@ -51,32 +51,38 @@ module Cacheable
   
   def self.register(obj, symbol)
     self.registry[obj] ||= Set.new
-    self.registry[obj] << symbol
+    self.registry[obj] << symbol.to_s
   end
   
-  def uncacheify(symbol)
-    ::Cacheable.delete self, symbol
-  rescue Memcached::NotFound
-    # ignore
-  end
-  
-  def uncacheify_all
+  def uncacheify(regexp)
+    regexp = Regexp.new(regexp) if regexp.is_a?(String)
     ::Cacheable.registry[metaclass].each do |symbol|
-      uncacheify symbol
+      begin
+        ::Cacheable.delete(self, symbol) if symbol.to_s =~ regexp
+      rescue Memcached::NotFound
+        # ignore
+      end
     end
+  end
+
+  def uncacheify_all
+    uncacheify /.*/
   end
   
   module InstanceMethods
-    def uncacheify(symbol)
-      ::Cacheable.delete self, symbol
-    rescue Memcached::NotFound
-      # ignore
+    def uncacheify(regexp)
+      regexp = Regexp.new(regexp) if regexp.is_a?(String)
+      ::Cacheable.registry[self.class].each do |symbol|
+        begin
+          ::Cacheable.delete(self, symbol) if symbol.to_s =~ regexp
+        rescue Memcached::NotFound
+          # ignore
+        end
+      end
     end
 
     def uncacheify_all
-      ::Cacheable.registry[self.class].each do |symbol|
-        uncacheify symbol
-      end
+      uncacheify /.*/
     end
     
     # This method intentionally commented out (see tests)

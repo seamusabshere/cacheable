@@ -123,4 +123,43 @@ class TestCacheable < Test::Unit::TestCase
     # assert !Vampire.metaclass.instance_methods.include?('foobar')
     # assert Vampire.instance_methods.include?('foobar')
   end
+  
+  should "take regexp arguments to uncacheify class methods" do
+    assert_equal 0, Vampire.enemy_count
+
+    # miss...
+    10.times do
+      Vampire.enemy
+      assert_equal 1, Vampire.enemy_count
+      Vampire.uncacheify /frazz.*/
+    end
+    
+    # hit...
+    10.times do
+      Vampire.enemy
+      assert_equal @flush_count, Vampire.enemy_count
+      Vampire.uncacheify /enem.*/
+      @flush_count += 1
+    end
+  end
+  
+  should "take regexp arguments to uncacheify instance methods" do
+    ed = Vampire.new(:edward)
+    assert_equal 0, ed.name_count
+
+    # miss...
+    10.times do
+      ed.name
+      assert_equal 1, ed.name_count
+      ed.uncacheify /frazz.*/
+    end
+    
+    # hit...
+    10.times do
+      ed.name
+      assert_equal @flush_count, ed.name_count
+      ed.uncacheify /nam.*/
+      @flush_count += 1
+    end
+  end
 end
