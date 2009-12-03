@@ -151,18 +151,21 @@ module Cacheable
         end
       else
         def #{symbol}(*args)
-          # sanitize args up here so that current_hash gets the benefit
-          args = ::Cacheable.sanitize_args args
-          shard_args = args[0, #{options[:sharding]}]
-          ::Cacheable.cas(self, #{symbol.inspect}, shard_args) do |current_hash|
+          sanitized_args = ::Cacheable.sanitize_args args
+          shard_args = sanitized_args[0, #{options[:sharding]}]
+          hash_args = sanitized_args[#{options[:sharding]}, sanitized_args.length]
+          
+          result = ::Cacheable.cas(self, #{symbol.inspect}, shard_args) do |current_hash|
             current_hash ||= Hash.new
-            if current_hash.has_key?(args)
-              current_hash[args]
+            if current_hash.has_key?(hash_args)
+              current_hash[hash_args]
             else
-              current_hash[args] = #{original_method}(*args)
+              current_hash[hash_args] = #{original_method}(*args)
             end
             current_hash
-          end[args]
+          end
+          
+          result[hash_args]
         end
       end
     EOS
