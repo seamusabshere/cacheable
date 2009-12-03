@@ -54,25 +54,14 @@ module Cacheable
     self.registry[obj] << symbol.to_s
   end
   
-  def uncacheify(regexp)
-    regexp = Regexp.new(regexp) if regexp.is_a?(String)
-    ::Cacheable.registry[metaclass].each do |symbol|
-      begin
-        ::Cacheable.delete(self, symbol) if symbol.to_s =~ regexp
-      rescue Memcached::NotFound
-        # ignore
-      end
-    end
-  end
-
-  def uncacheify_all
-    uncacheify /.*/
+  def self.extended(base)
+    base.extend SharedMethods
   end
   
-  module InstanceMethods
+  module SharedMethods
     def uncacheify(regexp)
       regexp = Regexp.new(regexp) if regexp.is_a?(String)
-      ::Cacheable.registry[self.class].each do |symbol|
+      ::Cacheable.registry[cacheable_base].each do |symbol|
         begin
           ::Cacheable.delete(self, symbol) if symbol.to_s =~ regexp
         rescue Memcached::NotFound
@@ -84,11 +73,25 @@ module Cacheable
     def uncacheify_all
       uncacheify /.*/
     end
+  end
+  
+  # This is called by "classes"
+  def cacheable_base
+    metaclass
+  end
+  
+  module InstanceMethods
+    # This is called by "instances"
+    def cacheable_base
+      self.class
+    end
     
     # This method intentionally commented out (see tests)
-    # def foobar
-    #   # hi
-    # end
+    if defined?(CACHEABLE_TEST)
+      def foobar
+        # hi
+      end
+    end
   end
 
   def cacheify(symbol)
@@ -97,8 +100,10 @@ module Cacheable
     ::Cacheable.register self, symbol
 
     class_eval <<-EOS, __FILE__, __LINE__
-      # Don't include InstanceMethods when this is called from the anonymous singleton (aka metaclass)
+      # If there's a name, that probably means we're expected to handle "instances" of a class
+      # In that case, make sure each instance responds to the uncacheify, etc.
       if self.name.present?
+        include SharedMethods
         include InstanceMethods
       end
       

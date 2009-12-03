@@ -2,6 +2,8 @@ require 'rubygems'
 require 'test/unit'
 require 'shoulda'
 
+CACHEABLE_TEST = true
+
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 require 'cacheable'

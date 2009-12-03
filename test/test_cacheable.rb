@@ -117,11 +117,11 @@ class TestCacheable < Test::Unit::TestCase
     assert !Object.respond_to?(:uncacheify)
     assert Vampire.metaclass.respond_to?(:uncacheify)
     assert Vampire.respond_to?(:uncacheify)
-    
+        
     # These tests intentionally commented out (see lib/cacheable.rb)
-    # assert !Object.instance_methods.include?('foobar')
-    # assert !Vampire.metaclass.instance_methods.include?('foobar')
-    # assert Vampire.instance_methods.include?('foobar')
+    assert !Object.instance_methods.include?('foobar')
+    assert !Vampire.metaclass.instance_methods.include?('foobar')
+    assert Vampire.instance_methods.include?('foobar')
   end
   
   should "take regexp arguments to uncacheify class methods" do
