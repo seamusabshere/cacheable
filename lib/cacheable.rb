@@ -56,7 +56,7 @@ module Cacheable
   
   def self.register(obj, symbol)
     self.registry[obj] ||= Set.new
-    self.registry[obj] << symbol.to_s
+    self.registry[obj] << symbol
   end
   
   def self.extended(base)
