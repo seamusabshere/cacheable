@@ -84,7 +84,7 @@ module Cacheable
   
   module SharedMethods
     def uncacheify(regexp, shard_args = :cacheable_deadbeef)
-      regexp = Regexp.new(regexp) if regexp.is_a?(String)
+      regexp = Regexp.new(regexp.to_s) unless regexp.is_a?(Regexp)
       ::Cacheable.registry[cacheable_base].each do |symbol|
         next unless symbol.to_s =~ regexp
         key = ::Cacheable.key_for(self, symbol, shard_args)
