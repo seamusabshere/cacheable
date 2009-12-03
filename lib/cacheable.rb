@@ -86,7 +86,6 @@ module Cacheable
       self.class
     end
     
-    # This method intentionally commented out (see tests)
     if defined?(CACHEABLE_TEST)
       def foobar
         # hi
