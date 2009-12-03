@@ -106,3 +106,14 @@ class Vampire
   end
   cacheify :eats?, :sharding => 1
 end
+
+class Human
+  attr_accessor :name
+  def initialize(name)
+    @name = name
+  end
+  
+  def cache_key
+    "Human:1/#{name}"
+  end
+end

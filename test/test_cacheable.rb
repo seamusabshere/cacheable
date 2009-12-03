@@ -25,6 +25,7 @@ class TestCacheable < Test::Unit::TestCase
     assert_equal 'Vampire/2/cacheable/c/bar', Cacheable.key_for(Vampire.new(:emmett), :c, 'bar')
     assert_equal 'Vampire/1/cacheable/b/boo/baz', Cacheable.key_for(Vampire.new(:edward), :b, ['boo', 'baz'])
     assert_equal 'Vampire/2/cacheable/c/baz/boo', Cacheable.key_for(Vampire.new(:emmett), :c, ['baz', 'boo'])
+    assert_equal 'Vampire/1/cacheable/b/Human:1/bella', Cacheable.key_for(Vampire.new(:edward), :b, Human.new(:bella))
   end
 
   should "be able to fetch from its cache" do

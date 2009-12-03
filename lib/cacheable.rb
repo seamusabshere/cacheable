@@ -20,10 +20,26 @@ module Cacheable
   def self.shorten_key(key)
     key.length < 250 ? key : key[0..239] + Zlib.crc32(key).to_s
   end
+  
+  def self.sanitize_args(args)
+    Array.wrap(args).map do |x|
+      if x.nil?
+        'nil'
+      elsif x.is_a? String
+        x
+      elsif x.is_a? Symbol
+        x.to_s
+      elsif x.respond_to? :cache_key
+        x.cache_key
+      else
+        x
+      end
+    end
+  end
 
-  def self.key_for(obj, symbol, shard_args = nil)
+  def self.key_for(obj, symbol, shard_args = :cacheable_deadbeef)
     ary = [ obj.cache_key, :cacheable, symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ]
-    ary += Array.wrap(shard_args) if shard_args
+    ary += sanitize_args(shard_args) unless shard_args == :cacheable_deadbeef
     shorten_key ary.join('/')
   end
 
@@ -66,7 +82,7 @@ module Cacheable
   end
   
   module SharedMethods
-    def uncacheify(regexp, shard_args = nil)
+    def uncacheify(regexp, shard_args = :cacheable_deadbeef)
       regexp = Regexp.new(regexp) if regexp.is_a?(String)
       ::Cacheable.registry[cacheable_base].each do |symbol|
         begin
@@ -131,6 +147,8 @@ module Cacheable
         end
       else
         def #{symbol}(*args)
+          # sanitize args up here so that current_hash gets the benefit
+          args = ::Cacheable.sanitize_args args
           shard_args = args[0, #{options[:sharding]}]
           ::Cacheable.cas(self, #{symbol.inspect}, shard_args) do |current_hash|
             current_hash ||= Hash.new
