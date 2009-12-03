@@ -63,10 +63,6 @@ module Cacheable
     end
     repository.get key
   end
-  
-  def self.delete(obj, symbol)
-    
-  end
 
   def self.registry
     Thread.current[:cacheable_registry] ||= Hash.new
