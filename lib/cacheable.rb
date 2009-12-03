@@ -105,14 +105,16 @@ module Cacheable
   end
   
   # This is called by "classes"
+  # Note that I'm checking "base_class" to be nice to ActiveRecord STI
   def cacheable_base
-    metaclass
+    respond_to?(:base_class) ? base_class.metaclass : metaclass
   end
   
   module InstanceMethods
     # This is called by "instances"
+    # Note that I'm checking "base_class" to be nice to ActiveRecord STI
     def cacheable_base
-      self.class
+      self.class.respond_to?(:base_class) ? self.class.base_class : self.class
     end
     
     if defined?(CACHEABLE_TEST)
