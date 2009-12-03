@@ -47,9 +47,11 @@ module Cacheable
     key = key_for obj, symbol
     begin
       repository.get key
+      $stderr.puts "CACHEABLE: fetch-get '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
     rescue Memcached::NotFound
       v = block.call
       repository.set key, v
+      $stderr.puts "CACHEABLE: fetch-set '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
       v
     end
   end
@@ -58,9 +60,12 @@ module Cacheable
     key = key_for obj, symbol, shard_args
     begin
       repository.cas key, &block
+      $stderr.puts "CACHEABLE: cas-cas '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
     rescue Memcached::NotFound
       repository.set key, block.call(nil)
+      $stderr.puts "CACHEABLE: cas-set '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
     end
+    $stderr.puts "CACHEABLE: cas-get '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
     repository.get key
   end
 
@@ -85,6 +90,7 @@ module Cacheable
         key = ::Cacheable.key_for(self, symbol, shard_args)
         begin
           ::Cacheable.repository.delete key
+          $stderr.puts "CACHEABLE: uncacheify-delete '#{key}'" if defined?(CACHEABLE_DEBUG) and CACHEABLE_DEBUG
         rescue Memcached::NotFound
           # ignore
         end
