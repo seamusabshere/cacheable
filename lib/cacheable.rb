@@ -2,6 +2,11 @@ require 'active_support'
 require 'set'
 require 'zlib'
 
+# There are three main "sections" in this code
+# * repository: deals with storing actual values in the memcached server
+# * registry: deals with keeping track of method names that have been cacheified
+# * mixin: deals with adding methods like "cacheify" and "uncacheify" wherever this module is extended
+# It might be nice to split these up into actual modules in different files.
 module Cacheable
   def self.repository
     Thread.current[:cacheable_repository]
