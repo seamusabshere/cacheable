@@ -18,14 +18,14 @@ class TestCacheable < Test::Unit::TestCase
   end
 
   should "keep track of where it's caching the results of a method call" do
-    assert_equal 'Vampire/cacheable/a', Cacheable.key_for(Vampire, :a)
-    assert_equal 'Vampire/1/cacheable/b', Cacheable.key_for(Vampire.new(:edward), :b)
-    assert_equal 'Vampire/2/cacheable/c', Cacheable.key_for(Vampire.new(:emmett), :c)
-    assert_equal 'Vampire/1/cacheable/b/foo', Cacheable.key_for(Vampire.new(:edward), :b, 'foo')
-    assert_equal 'Vampire/2/cacheable/c/bar', Cacheable.key_for(Vampire.new(:emmett), :c, 'bar')
-    assert_equal 'Vampire/1/cacheable/b/boo/baz', Cacheable.key_for(Vampire.new(:edward), :b, ['boo', 'baz'])
-    assert_equal 'Vampire/2/cacheable/c/baz/boo', Cacheable.key_for(Vampire.new(:emmett), :c, ['baz', 'boo'])
-    assert_equal 'Vampire/1/cacheable/b/Human:1/bella', Cacheable.key_for(Vampire.new(:edward), :b, Human.new(:bella))
+    assert_equal 'Cacheable/Vampire/a', Cacheable.key_for(Vampire, :a)
+    assert_equal 'Cacheable/Vampire/1/b', Cacheable.key_for(Vampire.new(:edward), :b)
+    assert_equal 'Cacheable/Vampire/2/c', Cacheable.key_for(Vampire.new(:emmett), :c)
+    assert_equal 'Cacheable/Vampire/1/b/foo', Cacheable.key_for(Vampire.new(:edward), :b, 'foo')
+    assert_equal 'Cacheable/Vampire/2/c/bar', Cacheable.key_for(Vampire.new(:emmett), :c, 'bar')
+    assert_equal 'Cacheable/Vampire/1/b/boo/baz', Cacheable.key_for(Vampire.new(:edward), :b, ['boo', 'baz'])
+    assert_equal 'Cacheable/Vampire/2/c/baz/boo', Cacheable.key_for(Vampire.new(:emmett), :c, ['baz', 'boo'])
+    assert_equal 'Cacheable/Vampire/1/b/Human:1/bella', Cacheable.key_for(Vampire.new(:edward), :b, Human.new(:bella))
   end
 
   should "be able to fetch from its cache" do

@@ -38,7 +38,7 @@ module Cacheable
   end
 
   def self.key_for(obj, symbol, shard_args = :cacheable_deadbeef)
-    ary = [ obj.cache_key, :cacheable, symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ]
+    ary = [ 'Cacheable', obj.cache_key, symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ]
     ary += sanitize_args(shard_args) unless shard_args == :cacheable_deadbeef
     shorten_key ary.join('/')
   end
