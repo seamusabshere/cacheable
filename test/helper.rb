@@ -19,8 +19,9 @@ require 'memcached'
 Cacheable.repository = Memcached.new 'localhost:11211', :support_cas => true
 
 class Vampire
-  cattr_accessor :enemy_count
+  cattr_accessor :enemy_count, :eye_color_count
   @@enemy_count = 0
+  @@eye_color_count = 0
 
   class << self
     # Cacheable interface on classes
@@ -35,6 +36,17 @@ class Vampire
       'Children of the Moon'
     end
     cacheify :enemy
+    
+    def eye_color(phase)
+      self.eye_color_count += 1
+      case phase
+      when :before_hunting
+        'black'
+      when :after_hunting
+        'gold'
+      end
+    end
+    cacheify :eye_color, :sharding => 1
   end
 
   # Cacheable interface for instances
@@ -44,7 +56,7 @@ class Vampire
   extend Cacheable
   # end Cacheable interface
 
-  attr_accessor :name_count, :frazzled_query_count, :pump_bang_count
+  attr_accessor :name_count, :frazzled_query_count, :pump_bang_count, :eats_query_count
 
   def initialize(shorthand)
     case shorthand
@@ -62,6 +74,7 @@ class Vampire
     @name_count = 0
     @frazzled_query_count = 0
     @pump_bang_count = 0
+    @eats_query_count = 0
   end
 
   def name
@@ -81,4 +94,15 @@ class Vampire
     @pumped = true
   end
   cacheify :pump!
+  
+  def eats?(food)
+    self.eats_query_count += 1
+    case food
+    when :humans
+      false
+    when :deer
+      true
+    end
+  end
+  cacheify :eats?, :sharding => 1
 end

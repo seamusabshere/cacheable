@@ -1,10 +1,16 @@
 require 'helper'
 
+# There are two reasons to apologize for these tests:
+# * Most tests cover multiple things
+# * ...and all of them refer to Twilight.
+# Sorry about that.
+
 class TestCacheable < Test::Unit::TestCase
   def setup
     Cacheable.repository.flush
     @flush_count = 1
     Vampire.enemy_count = 0
+    Vampire.eye_color_count = 0
   end
 
   should "keep track of the Memcached object it's talking to" do
@@ -15,6 +21,10 @@ class TestCacheable < Test::Unit::TestCase
     assert_equal 'Vampire/cacheable/a', Cacheable.key_for(Vampire, :a)
     assert_equal 'Vampire/1/cacheable/b', Cacheable.key_for(Vampire.new(:edward), :b)
     assert_equal 'Vampire/2/cacheable/c', Cacheable.key_for(Vampire.new(:emmett), :c)
+    assert_equal 'Vampire/1/cacheable/b/foo', Cacheable.key_for(Vampire.new(:edward), :b, 'foo')
+    assert_equal 'Vampire/2/cacheable/c/bar', Cacheable.key_for(Vampire.new(:emmett), :c, 'bar')
+    assert_equal 'Vampire/1/cacheable/b/boo/baz', Cacheable.key_for(Vampire.new(:edward), :b, ['boo', 'baz'])
+    assert_equal 'Vampire/2/cacheable/c/baz/boo', Cacheable.key_for(Vampire.new(:emmett), :c, ['baz', 'boo'])
   end
 
   should "be able to fetch from its cache" do
@@ -28,9 +38,9 @@ class TestCacheable < Test::Unit::TestCase
     new_value_hash = { :new => 'value' }
     Cacheable.repository.set Cacheable.key_for(Vampire, :already_there), existing_value_hash
 
-    assert_equal existing_value_hash.merge(new_value_hash), Cacheable.cas(Vampire, :already_there) { |current| current.merge new_value_hash }
+    assert_equal existing_value_hash.merge(new_value_hash), Cacheable.cas(Vampire, :already_there, nil) { |current| current.merge new_value_hash }
 
-    assert_equal new_value_hash, Cacheable.cas(Vampire, :totally_new) { |current| new_value_hash }
+    assert_equal new_value_hash, Cacheable.cas(Vampire, :totally_new, nil) { |current| new_value_hash }
   end
 
   should "cacheify a class method" do
@@ -42,6 +52,15 @@ class TestCacheable < Test::Unit::TestCase
     end
   end
 
+  should "cacheify a class method with sharding" do
+    assert_equal 0, Vampire.eye_color_count
+
+    10.times do
+      Vampire.eye_color(:before_hunting)
+      assert_equal 1, Vampire.eye_color_count
+    end
+  end
+
   should "cacheify an instance method" do
     ed = Vampire.new(:edward)
     assert_equal 0, ed.name_count
@@ -49,6 +68,16 @@ class TestCacheable < Test::Unit::TestCase
     10.times do
       ed.name
       assert_equal 1, ed.name_count
+    end
+  end
+
+  should "cacheify an instance method with sharding" do
+    ed = Vampire.new(:edward)
+    assert_equal 0, ed.eats_query_count
+
+    10.times do
+      ed.eats? :humans
+      assert_equal 1, ed.eats_query_count
     end
   end
 
@@ -74,7 +103,7 @@ class TestCacheable < Test::Unit::TestCase
     end
   end
 
-  should "regenerate the cache if the cache is flushed" do
+  should "regenerate the cache if the cache is brutally flushed" do
     ed = Vampire.new(:edward)
     assert_equal 0, ed.name_count
 
@@ -85,7 +114,7 @@ class TestCacheable < Test::Unit::TestCase
       @flush_count += 1
     end
   end
-
+  
   should "regenerate the cache on class methods if uncacheify_all is called" do
     assert_equal 0, Vampire.enemy_count
 
@@ -159,6 +188,48 @@ class TestCacheable < Test::Unit::TestCase
       ed.name
       assert_equal @flush_count, ed.name_count
       ed.uncacheify /nam.*/
+      @flush_count += 1
+    end
+  end
+  
+  should "take regexp arguments and shard args to uncacheify instance methods" do
+    ed = Vampire.new(:edward)
+    assert_equal 0, ed.eats_query_count
+
+    # miss...
+    10.times do
+      ed.eats? :humans
+      assert_equal 1, ed.eats_query_count
+      # First case
+      # can't use uncacheify_all for sharded things
+      ed.uncacheify_all
+      
+      # Second case
+      # for this to work, we would need to track shard args the same way we track symbols
+      # that's because we have to pass a discrete key to memcached in order to delete something
+      # if memcached supported key matching, then these could work
+      ed.uncacheify /eats.*humans/
+      ed.uncacheify /eats.*/
+      
+      # Third case
+      # wrong shard key
+      ed.uncacheify /eats.*/, 'deer'
+    end
+    
+    # hit...
+    10.times do
+      ed.eats? :humans
+      assert_equal @flush_count, ed.eats_query_count
+      ed.uncacheify /eats.*/, 'humans'
+      @flush_count += 1
+    end
+
+    # hit...
+    10.times do
+      ed.eats? :humans
+      assert_equal @flush_count, ed.eats_query_count
+      # Just demonstrating that it's ok to wrap the shard args in an array
+      ed.uncacheify /eats.*/, ['humans']
       @flush_count += 1
     end
   end

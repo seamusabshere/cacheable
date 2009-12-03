@@ -21,8 +21,10 @@ module Cacheable
     key.length < 250 ? key : key[0..239] + Zlib.crc32(key).to_s
   end
 
-  def self.key_for(obj, symbol)
-    shorten_key "#{obj.cache_key}/cacheable/#{symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang')}"
+  def self.key_for(obj, symbol, shard_args = nil)
+    ary = [ obj.cache_key, :cacheable, symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ]
+    ary += Array.wrap(shard_args) if shard_args
+    shorten_key ary.join('/')
   end
 
   def self.fetch(obj, symbol, &block)
@@ -36,8 +38,8 @@ module Cacheable
     end
   end
 
-  def self.cas(obj, symbol, &block)
-    key = key_for obj, symbol
+  def self.cas(obj, symbol, shard_args, &block)
+    key = key_for obj, symbol, shard_args
     begin
       repository.cas key, &block
     rescue Memcached::NotFound
@@ -47,7 +49,7 @@ module Cacheable
   end
   
   def self.delete(obj, symbol)
-    repository.delete key_for(obj, symbol)
+    
   end
 
   def self.registry
@@ -64,17 +66,21 @@ module Cacheable
   end
   
   module SharedMethods
-    def uncacheify(regexp)
+    def uncacheify(regexp, shard_args = nil)
       regexp = Regexp.new(regexp) if regexp.is_a?(String)
       ::Cacheable.registry[cacheable_base].each do |symbol|
         begin
-          ::Cacheable.delete(self, symbol) if symbol.to_s =~ regexp
+          if symbol.to_s =~ regexp
+            ::Cacheable.repository.delete ::Cacheable.key_for(self, symbol, shard_args)
+          end
         rescue Memcached::NotFound
           # ignore
         end
       end
     end
 
+    # Note that this does not clear sharded things
+    # For that you need, for example, uncacheify '.*', '14'
     def uncacheify_all
       uncacheify /.*/
     end
@@ -98,8 +104,9 @@ module Cacheable
     end
   end
 
-  def cacheify(symbol)
+  def cacheify(symbol, options = {})
     original_method = :"_uncacheified_#{symbol}"
+    options[:sharding] ||= 0
     
     ::Cacheable.register self, symbol
 
@@ -124,7 +131,8 @@ module Cacheable
         end
       else
         def #{symbol}(*args)
-          ::Cacheable.cas(self, #{symbol.inspect}) do |current_hash|
+          shard_args = args[0, #{options[:sharding]}]
+          ::Cacheable.cas(self, #{symbol.inspect}, shard_args) do |current_hash|
             current_hash ||= Hash.new
             if current_hash.has_key?(args)
               current_hash[args]
