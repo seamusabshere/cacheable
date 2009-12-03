@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "cacheable"
-    gem.summary = %Q{TODO: one-line summary of your gem}
-    gem.description = %Q{TODO: longer description of your gem}
+    gem.summary = %Q{Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
+    gem.description = %Q{Lets you cacheify :foobar and then uncacheify /foo.*/. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
     gem.email = "seamus@abshere.net"
     gem.homepage = "http://github.com/seamusabshere/cacheable"
     gem.authors = ["Seamus Abshere"]

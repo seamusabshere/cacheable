@@ -1,6 +1,12 @@
 = cacheable
 
-Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's libmemcached gem.
+Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.
+
+== Acknowledgements
+
+* ActiveSupport::Memoizable
+* {Yehuda Katz's post about "Better Ruby Idioms"}[http://yehudakatz.com/2009/11/12/better-ruby-idioms/]
+* {brighterplanet.com}[http://brighterplanet.com]
 
 == Wishlist
 
