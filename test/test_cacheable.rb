@@ -5,6 +5,9 @@ require 'helper'
 # * ...and all of them refer to Twilight.
 # Sorry about that.
 
+require 'vampire'
+require 'human'
+
 class TestCacheable < Test::Unit::TestCase
   def setup
     Cacheable.repository.flush
@@ -138,22 +141,7 @@ class TestCacheable < Test::Unit::TestCase
       @flush_count += 1
     end
   end
-  
-  should "only define methods where they're expected" do
-    assert !Object.respond_to?(:cacheify)
-    assert Vampire.metaclass.respond_to?(:cacheify)
-    assert Vampire.respond_to?(:cacheify)
     
-    assert !Object.respond_to?(:uncacheify)
-    assert Vampire.metaclass.respond_to?(:uncacheify)
-    assert Vampire.respond_to?(:uncacheify)
-        
-    # These tests intentionally commented out (see lib/cacheable.rb)
-    assert !Object.instance_methods.include?('foobar')
-    assert !Vampire.metaclass.instance_methods.include?('foobar')
-    assert Vampire.instance_methods.include?('foobar')
-  end
-  
   should "take regexp arguments to uncacheify class methods" do
     assert_equal 0, Vampire.enemy_count
   

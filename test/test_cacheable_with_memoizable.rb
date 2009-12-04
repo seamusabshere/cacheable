@@ -1,5 +1,7 @@
 require 'helper'
 
+require 'vampire'
+
 class Vampire
   extend ActiveSupport::Memoizable
 

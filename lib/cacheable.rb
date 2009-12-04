@@ -78,16 +78,44 @@ module Cacheable
     self.registry[obj] ||= Set.new
     self.registry[obj] << symbol
   end
-  
+
+  # Adds: FooClass.cacheable_base
+  def cacheable_base
+    respond_to?(:base_class) ? base_class.metaclass : metaclass
+  end
+
+  # Adds: FooClass#cacheable_base (a)
+  # Adds: FooClass.uncacheify and FooClass#uncacheify (b)
+  # Adds: FooClass.cacheify (c)
   def self.extended(base)
-    base.extend SharedMethods
+    # (a)
+    base.send :include, InstanceMethods
+
+    # (b)
+    base.extend ClassAndInstanceMethods
+    base.send :include, ClassAndInstanceMethods
+
+    # (c)
+    base.metaclass.extend MetaclassAndClassMethods
+    base.extend MetaclassAndClassMethods
   end
   
-  module SharedMethods
-    def uncacheify(regexp, shard_args = :cacheable_deadbeef)
-      regexp = Regexp.new(regexp.to_s) unless regexp.is_a?(Regexp)
-      ::Cacheable.registry[cacheable_base].each do |symbol|
-        next unless symbol.to_s =~ regexp
+  module InstanceMethods
+    def cacheable_base
+      self.class.respond_to?(:base_class) ? self.class.base_class : self.class
+    end
+  end
+  
+  module ClassAndInstanceMethods
+    def uncacheify(symbol_or_regexp, shard_args = :cacheable_deadbeef)
+      case symbol_or_regexp
+      when Symbol, String
+        symbols = [symbol_or_regexp.to_sym]
+      when Regexp
+        symbols = ::Cacheable.registry[cacheable_base].select { |x| x.to_s =~ symbol_or_regexp }
+      end
+      
+      symbols.each do |symbol|
         key = ::Cacheable.key_for(self, symbol, shard_args)
         begin
           $stderr.puts "CACHEABLE: uncacheify-delete '#{key}'" if defined?(CACHEABLE_DEBUG)
@@ -98,78 +126,51 @@ module Cacheable
       end
     end
 
-    # Note that this does not clear sharded things
-    # For that you need, for example, uncacheify '.*', '14'
     def uncacheify_all
       uncacheify /.*/
     end
   end
-  
-  # This is called by "classes"
-  # Note that I'm checking "base_class" to be nice to ActiveRecord STI
-  def cacheable_base
-    respond_to?(:base_class) ? base_class.metaclass : metaclass
-  end
-  
-  module InstanceMethods
-    # This is called by "instances"
-    # Note that I'm checking "base_class" to be nice to ActiveRecord STI
-    def cacheable_base
-      self.class.respond_to?(:base_class) ? self.class.base_class : self.class
-    end
+
+  module MetaclassAndClassMethods
+    def cacheify(symbol, options = {})
+      original_method = :"_uncacheified_#{symbol}"
+      options[:sharding] ||= 0
+      options[:ttl] ||= 60
     
-    if defined?(CACHEABLE_TEST)
-      def foobar
-        # hi
-      end
-    end
-  end
+      ::Cacheable.register self, symbol
 
-  def cacheify(symbol, options = {})
-    original_method = :"_uncacheified_#{symbol}"
-    options[:sharding] ||= 0
-    options[:ttl] ||= 60
-    
-    ::Cacheable.register self, symbol
-
-    class_eval <<-EOS, __FILE__, __LINE__
-      # If there's a name, that probably means we're expected to handle "instances" of a class
-      # In that case, make sure each instance responds to the uncacheify, etc.
-      if self.name.present?
-        include SharedMethods
-        include InstanceMethods
-      end
-      
-      if method_defined?(:#{original_method})
-        raise "Already cacheified #{symbol}"
-      end
-      alias #{original_method} #{symbol}
-
-      if instance_method(:#{symbol}).arity == 0
-        def #{symbol}
-          ::Cacheable.fetch(self, #{symbol.inspect}, #{options[:ttl]}) do
-            #{original_method}
-          end
+      class_eval <<-EOS, __FILE__, __LINE__
+        if method_defined?(:#{original_method})
+          raise "Already cacheified #{symbol}"
         end
-      else
-        def #{symbol}(*args)
-          sanitized_args = ::Cacheable.sanitize_args args
-          shard_args = sanitized_args[0, #{options[:sharding]}]
-          hash_args = sanitized_args[#{options[:sharding]}, sanitized_args.length]
-          
-          result = ::Cacheable.cas(self, #{symbol.inspect}, shard_args, #{options[:ttl]}) do |current_hash|
-            current_hash ||= Hash.new
-            if current_hash.has_key?(hash_args)
-              current_hash[hash_args]
-            else
-              current_hash[hash_args] = #{original_method}(*args)
+        alias #{original_method} #{symbol}
+
+        if instance_method(:#{symbol}).arity == 0
+          def #{symbol}
+            ::Cacheable.fetch(self, #{symbol.inspect}, #{options[:ttl]}) do
+              #{original_method}
             end
-            current_hash
           end
+        else
+          def #{symbol}(*args)
+            sanitized_args = ::Cacheable.sanitize_args args
+            shard_args = sanitized_args[0, #{options[:sharding]}]
+            hash_args = sanitized_args[#{options[:sharding]}, sanitized_args.length]
           
-          result[hash_args]
+            result = ::Cacheable.cas(self, #{symbol.inspect}, shard_args, #{options[:ttl]}) do |current_hash|
+              current_hash ||= Hash.new
+              if current_hash.has_key?(hash_args)
+                current_hash[hash_args]
+              else
+                current_hash[hash_args] = #{original_method}(*args)
+              end
+              current_hash
+            end
+          
+            result[hash_args]
+          end
         end
-      end
-    EOS
+      EOS
+    end
   end
 end
