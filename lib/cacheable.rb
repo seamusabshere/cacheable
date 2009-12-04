@@ -43,27 +43,27 @@ module Cacheable
     shorten_key ary.join('/')
   end
 
-  def self.fetch(obj, symbol, &block)
+  def self.fetch(obj, symbol, ttl, &block)
     key = key_for obj, symbol
     begin
       $stderr.puts "CACHEABLE: fetch-get '#{key}'" if defined?(CACHEABLE_DEBUG)
       repository.get key
     rescue Memcached::NotFound
       v = block.call
-      $stderr.puts "CACHEABLE: fetch-set '#{key}'" if defined?(CACHEABLE_DEBUG)
-      repository.set key, v
+      $stderr.puts "CACHEABLE: fetch-set (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
+      repository.set key, v, ttl
       v
     end
   end
 
-  def self.cas(obj, symbol, shard_args, &block)
+  def self.cas(obj, symbol, shard_args, ttl, &block)
     key = key_for obj, symbol, shard_args
     begin
-      $stderr.puts "CACHEABLE: cas-cas '#{key}'" if defined?(CACHEABLE_DEBUG)
-      repository.cas key, &block
+      $stderr.puts "CACHEABLE: cas-cas (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
+      repository.cas key, ttl, &block
     rescue Memcached::NotFound
-      $stderr.puts "CACHEABLE: cas-set '#{key}'" if defined?(CACHEABLE_DEBUG)
-      repository.set key, block.call(nil)
+      $stderr.puts "CACHEABLE: cas-set (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
+      repository.set key, block.call(nil), ttl
     end
     $stderr.puts "CACHEABLE: cas-get '#{key}'" if defined?(CACHEABLE_DEBUG)
     repository.get key
@@ -127,6 +127,7 @@ module Cacheable
   def cacheify(symbol, options = {})
     original_method = :"_uncacheified_#{symbol}"
     options[:sharding] ||= 0
+    options[:ttl] ||= 60
     
     ::Cacheable.register self, symbol
 
@@ -145,7 +146,7 @@ module Cacheable
 
       if instance_method(:#{symbol}).arity == 0
         def #{symbol}
-          ::Cacheable.fetch(self, #{symbol.inspect}) do
+          ::Cacheable.fetch(self, #{symbol.inspect}, #{options[:ttl]}) do
             #{original_method}
           end
         end
@@ -155,7 +156,7 @@ module Cacheable
           shard_args = sanitized_args[0, #{options[:sharding]}]
           hash_args = sanitized_args[#{options[:sharding]}, sanitized_args.length]
           
-          result = ::Cacheable.cas(self, #{symbol.inspect}, shard_args) do |current_hash|
+          result = ::Cacheable.cas(self, #{symbol.inspect}, shard_args, #{options[:ttl]}) do |current_hash|
             current_hash ||= Hash.new
             if current_hash.has_key?(hash_args)
               current_hash[hash_args]
