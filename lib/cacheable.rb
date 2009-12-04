@@ -32,7 +32,8 @@ module Cacheable
       elsif x.respond_to? :cache_key
         x.cache_key
       else
-        x
+        # provided by ActiveSupport
+        x.to_param
       end
     end
   end
