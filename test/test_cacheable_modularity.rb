@@ -1,12 +1,12 @@
 require 'helper'
 
-class Dummy
-  def self.cache_key; 'Dummy'; end
-  def cache_key; "Dummy/#{@name}"; end
-  def initialize(name); @name = name; end
-end
-
 class TestCacheableModularity < Test::Unit::TestCase
+  class Dummy
+    def self.cache_key; 'Dummy'; end
+    def cache_key; "Dummy/#{@name}"; end
+    def initialize(name); @name = name; end
+  end
+  
   should "define cacheify so that it works for 'class' methods" do
     assert_nothing_raised do
       class Dummy1 < Dummy

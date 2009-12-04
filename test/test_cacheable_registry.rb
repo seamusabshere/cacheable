@@ -1,24 +1,24 @@
 require 'helper'
 require 'mocha'
 
-class Dummy
-  def self.cache_key; 'Dummy'; end
-  def cache_key; "Dummy/#{@name}"; end
-  def initialize(name); @name = name; end
-  extend Cacheable
-  class << self
-    def class_method_1; end
-    cacheify :class_method_1
-    def class_method_2(*args); end
-    cacheify :class_method_2, :sharding => 1
-  end
-  def instance_method_1; end
-  cacheify :instance_method_1
-  def instance_method_2(*args); end
-  cacheify :instance_method_2, :sharding => 1
-end
-
 class TestCacheableRegistry < Test::Unit::TestCase
+  class Dummy
+    def self.cache_key; 'Dummy'; end
+    def cache_key; "Dummy/#{@name}"; end
+    def initialize(name); @name = name; end
+    extend Cacheable
+    class << self
+      def class_method_1; end
+      cacheify :class_method_1
+      def class_method_2(*args); end
+      cacheify :class_method_2, :sharding => 1
+    end
+    def instance_method_1; end
+    cacheify :instance_method_1
+    def instance_method_2(*args); end
+    cacheify :instance_method_2, :sharding => 1
+  end
+  
   should "register class methods" do
     assert Cacheable.registry[Dummy.metaclass].include?(:class_method_1)
   end
