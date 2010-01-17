@@ -2,6 +2,103 @@
 
 Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.
 
+== Requirements
+
+The <tt>memcached</tt> gem.
+
+== Real-world use
+
+In production use at http://brighterplanet.com since November 2009.
+
+== Quickstart
+
+In <tt>config/environment.rb</tt>...
+
+  config.gem 'memcached', :source => 'http://gemcutter.org'
+  config.gem 'cacheable', :source => 'http://gemcutter.org'
+
+And then in <tt>config/initializers/cacheable.rb</tt>...
+
+  servers = [ 'localhost:11211' ]
+  options = {
+    :support_cas => true,
+    :binary_protocol => true,             # Use the binary protocol to reduce query processing overhead. Defaults to false.
+    :connect_timeout => 5,                # How long to wait for a connection to a server. Defaults to 2 seconds. Set to 0 if you want to wait forever.
+    :timeout => 0.25,                     # How long to wait for a response from the server. Defaults to 0.25 seconds. Set to 0 if you want to wait forever.
+    :server_failure_limit => 25           # How many consecutive failures to allow before marking a host as dead. Has no effect unless :retry_timeout is also set. Defaults to 2
+  }
+  Cacheable.repository = Memcached.new servers, options
+
+Then in a model:
+
+  class ProjectFundDeposit < ActiveRecord::Base
+    # do this just once and it will work for both instance and class methods
+    extend Cacheable
+    
+    # an instance method
+    def foo
+      # etc.
+    end
+    cacheify :foo
+    
+    # a instance method that takes arguments (works just the same)
+    def bar(args)
+      # etc.
+    end
+    cacheify :bar
+  
+    class << self
+      # a class method
+      def baz
+        # etc.
+      end
+      cacheify :baz
+    end
+    
+    after_save :clear_cache
+    after_destroy :clear_cache
+    def clear_cache
+      uncacheify :foo
+      uncacheify :bar, "a really good argument"
+      self.class.uncacheify_all
+      true
+    end
+  end
+
+== Expiry
+
+You can also specify an expiry in seconds (default is 60):
+
+  cacheify :foo, :ttl => 3600
+
+== Combining cacheing and memoization (careful!)
+
+  class ProjectFundDeposit < ActiveRecord::Base
+    # just once
+    extend Cacheable
+    # once for instance methods
+    extend ActiveSupport::Memoizable
+  
+    def foo
+      # etc.
+    end
+    cacheify :foo
+    memoize :foo
+
+    class << self
+      # once for class methods
+      extend ActiveSupport::Memoizable
+  
+      def baz
+        # etc.
+      end
+      cacheify :baz
+      memoize :baz
+    end
+  end
+
+Note that since there can be many ActiveRecord objects instantiated to represent the same row in the database, memoization doesn't always work like you want.
+
 == Acknowledgements
 
 * ActiveSupport::Memoizable
