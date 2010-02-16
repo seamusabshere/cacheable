@@ -59,12 +59,17 @@ module Cacheable
 
   def self.cas(obj, symbol, shard_args, ttl, &block)
     key = key_for obj, symbol, shard_args
+    retry_count = 3
     begin
       $stderr.puts "CACHEABLE: cas-cas (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
       repository.cas key, ttl, &block
     rescue Memcached::NotFound
-      $stderr.puts "CACHEABLE: cas-set (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
-      repository.set key, block.call(nil), ttl
+      $stderr.puts "CACHEABLE: retrying cas because not found (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
+      repository.set key, nil, ttl
+      retry if (retry_count -= 1) > 0
+    rescue Memcached::ConnectionDataExists
+      $stderr.puts "CACHEABLE: retrying cas because exists (ttl #{ttl}) '#{key}'" if defined?(CACHEABLE_DEBUG)
+      retry if (retry_count -= 1) > 0
     end
     $stderr.puts "CACHEABLE: cas-get '#{key}'" if defined?(CACHEABLE_DEBUG)
     repository.get key

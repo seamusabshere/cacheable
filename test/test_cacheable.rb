@@ -47,6 +47,33 @@ class TestCacheable < Test::Unit::TestCase
     assert_equal new_value_hash, Cacheable.cas(Vampire, :totally_new, nil, 60) { |current| new_value_hash }
   end
   
+  should "be able to recover from compare and swap errors" do
+    existing_value_hash = { :existing => 'value' }
+    new_value_hash = { :new => 'value' }
+    interrupting_value_hash = { :interrupting => 'value' }
+    Cacheable.repository.set Cacheable.key_for(Vampire, :already_there), existing_value_hash
+  
+    done = false
+    Cacheable.cas(Vampire, :already_there, nil, 60) do |current|
+      unless done
+        Cacheable.repository.set Cacheable.key_for(Vampire, :already_there), current.merge(interrupting_value_hash), 60
+        done = true
+      end
+      current.merge new_value_hash
+    end
+    assert_equal(existing_value_hash.merge(new_value_hash).merge(interrupting_value_hash), Cacheable.repository.get(Cacheable.key_for(Vampire, :already_there)))
+
+    done = false
+    Cacheable.cas(Vampire, :totally_new, nil, 60) do |current|
+      unless done
+        Cacheable.repository.set Cacheable.key_for(Vampire, :totally_new), 'interrupting', 60
+        done = true
+      end
+      current.to_s + 'hello'
+    end
+    assert_equal 'interruptinghello', Cacheable.repository.get(Cacheable.key_for(Vampire, :totally_new))
+  end
+  
   should "cacheify a class method" do
     assert_equal 0, Vampire.enemy_count
   
