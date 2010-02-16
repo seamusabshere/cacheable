@@ -12,30 +12,17 @@ end
 # * mixin: deals with adding methods like "cacheify" and "uncacheify" wherever this module is extended
 # It might be nice to split these up into actual modules in different files.
 module Cacheable
-  if defined?(Mongrel)
-    # Defined if using mongrel.
-    def self.repository
-      $cacheable_repository
-    end
-    # Expects an instance of Memcached. Defined if using mongrel.
-    def self.repository=(memcached_instance)
-      $cacheable_repository = memcached_instance
-    end
-    # Defined if using mongrel.
-    def self.registry
-      $cacheable_registry ||= Hash.new
-    end
-  else
-    def self.repository
-      Thread.current[:cacheable_repository]
-    end
-    # Expects an instance of Memcached.
-    def self.repository=(memcached_instance)
-      Thread.current[:cacheable_repository] = memcached_instance
-    end
-    def self.registry
-      Thread.current[:cacheable_registry] ||= Hash.new
-    end
+  def self.repository
+    $cacheable_repository
+  end
+
+  # Expects an instance of Memcached.
+  def self.repository=(memcached_instance)
+    $cacheable_repository = memcached_instance
+  end
+
+  def self.registry
+    $cacheable_registry ||= Hash.new
   end
 
   def self.shorten_key(key)
