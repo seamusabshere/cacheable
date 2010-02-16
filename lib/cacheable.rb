@@ -2,6 +2,10 @@ require 'active_support'
 require 'set'
 require 'zlib'
 
+unless defined?(MEMCACHED_MAXIMUM_KEY_LENGTH)
+  MEMCACHED_MAXIMUM_KEY_LENGTH = 250
+end
+
 # There are three main "sections" in this code
 # * repository: deals with storing actual values in the memcached server
 # * registry: deals with keeping track of method names that have been cacheified
@@ -35,7 +39,7 @@ module Cacheable
   end
 
   def self.shorten_key(key)
-    key.length < 250 ? key : key[0..239] + Zlib.crc32(key).to_s
+    key.length < MEMCACHED_MAXIMUM_KEY_LENGTH ? key : key[0..MEMCACHED_MAXIMUM_KEY_LENGTH-11] + Zlib.crc32(key).to_s
   end
   
   def self.sanitize_args(args)
