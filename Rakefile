@@ -10,7 +10,8 @@ begin
     gem.email = "seamus@abshere.net"
     gem.homepage = "http://github.com/seamusabshere/cacheable"
     gem.authors = ["Seamus Abshere"]
-    %w{ activesupport memcached }.each { |name| gem.add_dependency name }
+    gem.add_dependency 'activesupport', '>=2.3.4'
+    gem.add_dependency 'memcached', '>=0.18.0'
     gem.add_development_dependency "thoughtbot-shoulda", ">= 0"
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
