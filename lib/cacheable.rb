@@ -1,9 +1,20 @@
 require 'active_support'
+require 'active_support/core_ext/class/attribute_accessors'
+
+begin; require 'active_support/core_ext/object/singleton_class'; rescue MissingSourceFile; end
+begin; require 'active_support/core_ext/object/to_param'; rescue MissingSourceFile; end
+
 require 'set'
 require 'zlib'
 
 unless defined?(MEMCACHED_MAXIMUM_KEY_LENGTH)
   MEMCACHED_MAXIMUM_KEY_LENGTH = 250
+end
+
+if Object.respond_to? :singleton_class
+  SINGLETON_CLASS_METHOD = :singleton_class
+else
+  SINGLETON_CLASS_METHOD = :metaclass
 end
 
 # There are three main "sections" in this code
@@ -89,7 +100,7 @@ module Cacheable
 
   # Adds: FooClass.cacheable_base
   def cacheable_base
-    respond_to?(:base_class) ? base_class.metaclass : metaclass
+    respond_to?(:base_class) ? base_class.send(SINGLETON_CLASS_METHOD) : send(SINGLETON_CLASS_METHOD)
   end
 
   # Adds: FooClass#cacheable_base (a)
@@ -104,7 +115,7 @@ module Cacheable
     base.send :include, ClassAndInstanceMethods
 
     # (c)
-    base.metaclass.extend MetaclassAndClassMethods
+    base.send(SINGLETON_CLASS_METHOD).extend MetaclassAndClassMethods
     base.extend MetaclassAndClassMethods
   end
   

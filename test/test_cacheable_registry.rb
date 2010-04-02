@@ -20,7 +20,7 @@ class TestCacheableRegistry < Test::Unit::TestCase
   end
   
   should "register class methods" do
-    assert Cacheable.registry[Dummy.metaclass].include?(:class_method_1)
+    assert Cacheable.registry[Dummy.send(SINGLETON_CLASS_METHOD)].include?(:class_method_1)
   end
   
   should "register instance methods" do
