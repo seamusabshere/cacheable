@@ -29,8 +29,8 @@ module Cacheable
     key.length < MEMCACHED_MAXIMUM_KEY_LENGTH ? key : key[0..MEMCACHED_MAXIMUM_KEY_LENGTH-11] + Zlib.crc32(key).to_s
   end
   
-  def self.sanitize_args(args)
-    Array.wrap(args).map do |x|
+  def self.sanitize_array(ary)
+    ary.map do |x|
       if x.nil?
         'nil'
       elsif x.is_a? String
@@ -160,7 +160,7 @@ module Cacheable
           end
         else
           def #{symbol}(*args)
-            sanitized_args = ::Cacheable.sanitize_args args
+            sanitized_args = ::Cacheable.sanitize_array args
             hash_args = sanitized_args[sanitized_args.length]
           
             result = ::Cacheable.cas(self, #{symbol.inspect}, #{options[:ttl]}) do |current_hash|
