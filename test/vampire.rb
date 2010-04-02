@@ -24,7 +24,7 @@ class Vampire
         'gold'
       end
     end
-    cacheify :eye_color, :sharding => 1
+    cacheify :eye_color
   end
 
   def cache_key
@@ -79,5 +79,5 @@ class Vampire
       true
     end
   end
-  cacheify :eats?, :sharding => 1
+  cacheify :eats?
 end
