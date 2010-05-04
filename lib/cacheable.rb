@@ -1,8 +1,11 @@
 require 'active_support'
-require 'active_support/core_ext/class/attribute_accessors'
-
-begin; require 'active_support/core_ext/object/singleton_class'; rescue MissingSourceFile; end
-begin; require 'active_support/core_ext/object/to_param'; rescue MissingSourceFile; end
+require 'active_support/version'
+%w{
+  active_support/core_ext/object
+  active_support/core_ext/class
+}.each do |active_support_3_requirement|
+  require active_support_3_requirement
+end if ActiveSupport::VERSION::MAJOR == 3
 
 require 'set'
 require 'zlib'
