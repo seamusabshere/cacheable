@@ -42,26 +42,28 @@ module Cacheable
   def self.shorten_key(key)
     key.length < MEMCACHED_MAXIMUM_KEY_LENGTH ? key : key[0..MEMCACHED_MAXIMUM_KEY_LENGTH-11] + Zlib.crc32(key).to_s
   end
+
+  def self.cache_key(obj)
+    if obj.nil?
+      'nil'
+    elsif obj.is_a? String
+      obj
+    elsif obj.is_a? Symbol
+      obj.to_s
+    elsif obj.respond_to? :cache_key
+      obj.cache_key
+    else
+      # provided by ActiveSupport
+      obj.to_param
+    end
+  end
   
   def self.sanitize_array(ary)
-    ary.map do |x|
-      if x.nil?
-        'nil'
-      elsif x.is_a? String
-        x
-      elsif x.is_a? Symbol
-        x.to_s
-      elsif x.respond_to? :cache_key
-        x.cache_key
-      else
-        # provided by ActiveSupport
-        x.to_param
-      end
-    end
+    ary.map { |x| cache_key x }
   end
 
   def self.key_for(obj, symbol)
-    shorten_key [ 'Cacheable', obj.cache_key, symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ].join('/')
+    shorten_key [ 'Cacheable', cache_key(obj), symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ].join('/')
   end
 
   def self.fetch(obj, symbol, ttl, &block)
