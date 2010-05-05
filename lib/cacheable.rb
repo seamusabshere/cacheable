@@ -44,18 +44,18 @@ module Cacheable
   end
 
   def self.cache_key(obj)
-    if obj.nil?
+    if obj.respond_to? :cache_key
+      obj.cache_key
+    elsif obj.nil?
       'nil'
     elsif obj.is_a? String
       obj
     elsif obj.is_a? Symbol
       obj.to_s
-    elsif obj.respond_to? :cache_key
-      obj.cache_key
     else
       # provided by ActiveSupport
       obj.to_param
-    end.gsub /\s+/, '-'
+    end.to_s.gsub /\s+/, '-'
   end
   
   def self.sanitize_array(ary)
