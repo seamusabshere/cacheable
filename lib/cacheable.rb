@@ -55,7 +55,7 @@ module Cacheable
     else
       # provided by ActiveSupport
       obj.to_param
-    end
+    end.gsub /\s+/, '-'
   end
   
   def self.sanitize_array(ary)
