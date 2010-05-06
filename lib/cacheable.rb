@@ -180,7 +180,7 @@ module Cacheable
             hash_args = sanitized_args[sanitized_args.length]
           
             result = ::Cacheable.cas(self, #{symbol.inspect}, #{options[:ttl]}) do |current_hash|
-              current_hash ||= Hash.new
+              current_hash = Hash.new unless current_hash.is_a?(Hash)
               if current_hash.has_key?(hash_args)
                 current_hash[hash_args]
               else
