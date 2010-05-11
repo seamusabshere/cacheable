@@ -172,7 +172,7 @@ module Cacheable
           end
         else
           def #{symbol}(*args)
-            hash_args = ::Cacheable.key_for args
+            hash_args = ::Cacheable.key_for args, 'hash_args'
             
             result = ::Cacheable.cas(self, #{symbol.inspect}, #{options[:ttl]}) do |current_hash|
               current_hash = Hash.new unless current_hash.is_a?(Hash)
