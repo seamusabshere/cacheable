@@ -58,10 +58,6 @@ module Cacheable
     end.to_s.gsub /\s+/, '-'
   end
   
-  def self.sanitize_array(ary)
-    ary.map { |x| cache_key x }
-  end
-
   def self.key_for(obj, symbol)
     shorten_key [ 'Cacheable', cache_key(obj), symbol.to_s.sub(/\?\Z/, '_query').sub(/!\Z/, '_bang') ].join('/')
   end
@@ -176,9 +172,8 @@ module Cacheable
           end
         else
           def #{symbol}(*args)
-            sanitized_args = ::Cacheable.sanitize_array args
-            hash_args = sanitized_args[sanitized_args.length]
-          
+            hash_args = ::Cacheable.key_for args
+            
             result = ::Cacheable.cas(self, #{symbol.inspect}, #{options[:ttl]}) do |current_hash|
               current_hash = Hash.new unless current_hash.is_a?(Hash)
               if current_hash.has_key?(hash_args)
