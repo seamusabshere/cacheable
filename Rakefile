@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "cacheable"
-    gem.summary = %Q{Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
-    gem.description = %Q{Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
+    gem.summary = %Q{DEPRECATED: use the "cache_method" gem instead. Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
+    gem.description = %Q{DEPRECATED: use the "cache_method" gem instead. Like ActiveSupport::Memoizable, but for caching. Uses Evan Weaver's memcached gem (i.e. libmemcached) for speed.}
     gem.email = "seamus@abshere.net"
     gem.homepage = "http://github.com/seamusabshere/cacheable"
     gem.authors = ["Seamus Abshere"]
